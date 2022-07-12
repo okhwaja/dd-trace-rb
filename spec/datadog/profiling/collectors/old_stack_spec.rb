@@ -94,7 +94,7 @@ RSpec.describe Datadog::Profiling::Collectors::OldStack do
 
         it 'can clean up leftover tracking state on an instance of Process::Waiter without crashing' do
           expect_in_fork do
-            expect(thread_api).to receive(:list).and_return([Process.detach(fork { sleep })])
+            expect(thread_api).to receive(:list).and_return([Process.detach(0)])
 
             start
           end
@@ -492,9 +492,12 @@ RSpec.describe Datadog::Profiling::Collectors::OldStack do
 
       it 'can sample an instance of Process::Waiter without crashing' do
         expect_in_fork do
-          process_waiter_thread = Process.detach(fork { sleep })
+          forked_process = fork { sleep }
+          process_waiter_thread = Process.detach(forked_process)
 
           expect(collector.collect_thread_event(process_waiter_thread, 0)).to be_truthy
+
+          Process.kill('TERM', forked_process)
         end
       end
     end
@@ -741,7 +744,7 @@ RSpec.describe Datadog::Profiling::Collectors::OldStack do
       end
     end
 
-    let(:process_waiter_thread) { Process.detach(fork { sleep }) }
+    let(:process_waiter_thread) { Process.detach(0) }
 
     describe 'the crash' do
       # Let's not get surprised if this shows up in other Ruby versions
